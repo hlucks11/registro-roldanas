@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro de Roldanas</title>
+<style>
+  :root {
+    --teal: #008080;
+    --teal-dark: #045f5f;
+    --charcoal: #5C5D54;
+    --bg: #F5F6F4;
+    --card: #FFFFFF;
+    --border: #D8DAD3;
+    --text: #2C2C2A;
+    --text-muted: #6B6C64;
+    --danger: #B23A2E;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 0 0 60px;
+  }
+  header {
+    background: var(--charcoal);
+    color: #fff;
+    padding: 20px 20px 18px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 600;
+  }
+  header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    opacity: 0.85;
+  }
+  main {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .field {
+    margin-bottom: 16px;
+  }
+  .field:last-child { margin-bottom: 0; }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--charcoal);
+    margin-bottom: 6px;
+  }
+  label .opt {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 12px 12px;
+    font-size: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px rgba(0,128,128,0.15);
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  .radio-group {
+    display: flex;
+    gap: 10px;
+  }
+  .radio-option {
+    flex: 1;
+    position: relative;
+  }
+  .radio-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+  }
+  .radio-option span {
+    display: block;
+    text-align: center;
+    padding: 12px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    pointer-events: none;
+  }
+  .radio-option input[type="radio"]:checked + span {
+    background: var(--teal);
+    border-color: var(--teal);
+    color: #fff;
+  }
+  .hidden { display: none !important; }
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--teal-dark);
+    margin: 0 0 12px;
+  }
+  button#btnEnviar {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--teal);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button#btnEnviar:active { background: var(--teal-dark); }
+  button#btnEnviar:disabled { background: var(--text-muted); cursor: default; }
+  .status {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.ok { background: #E1F5EE; color: #085041; border: 1px solid #5DCAA5; }
+  .status.err { background: #FCEBEB; color: #791F1F; border: 1px solid #F09595; }
+  .status.loading { background: #F1EFE8; color: var(--charcoal); border: 1px solid var(--border); }
+  .download-link {
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+    padding: 14px;
+    background: var(--charcoal);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .download-link:active { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Registro de troca de roldanas</h1>
+  <p>Preencha os campos abaixo. Ao enviar, o PDF do registro é baixado automaticamente.</p>
+</header>
+
+<main>
+  <form id="formRoldana">
+
+    <div class="card">
+      <p class="section-title">Identificação</p>
+
+      <div class="field">
+        <label for="data">Data</label>
+        <input type="date" id="data" required>
+      </div>
+
+      <div class="field">
+        <label for="hora">Hora</label>
+        <select id="hora" required></select>
+      </div>
+
+      <div class="field">
+        <label>Turno</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="turno" value="Dia" required>
+            <span>Dia</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="turno" value="Noite">
+            <span>Noite</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="letra">Letra</label>
+        <select id="letra" required>
+          <option value="">Selecione</option>
+          <option>A</option><option>B</option><option>C</option><option>D</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="nome">Nome do colaborador</label>
+        <input type="text" id="nome" required>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Identificação do ativo</p>
+
+      <div class="field">
+        <label for="filtro">Filtro</label>
+        <select id="filtro" required>
+          <option value="">Selecione</option>
+          <option>FL-002</option><option>FL-003</option><option>FL-004</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="placa">Placa</label>
+        <select id="placa" required></select>
+      </div>
+
+      <div class="field">
+        <label>Lado</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="lado" value="LD - Fixo" required>
+            <span>LD – Fixo</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="lado" value="LE - Móvel">
+            <span>LE – Móvel</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="section-title">Detalhes da troca</p>
+
+      <div class="field">
+        <label>Tipo de troca</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="tipoTroca" value="Preventiva" required>
+            <span>Preventiva</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="tipoTroca" value="Corretiva">
+            <span>Corretiva</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="field hidden" id="campoMotivoPreventiva">
+        <label for="motivoPreventiva">Motivo</label>
+        <select id="motivoPreventiva">
+          <option value="">Selecione</option>
+          <option>Folga Axial</option>
+          <option>Folga Radial</option>
+          <option>Folga Radial/Axial</option>
+          <option>Abertura de mais de 3mm da tampa</option>
+          <option>Desgaste por Utilização</option>
+        </select>
+      </div>
+
+      <div class="field hidden" id="campoMotivoCorretiva">
+        <label for="motivoCorretiva">Motivo</label>
+        <select id="motivoCorretiva">
+          <option value="">Selecione</option>
+          <option>Quebra do parafuso de fixação</option>
+          <option>Rolamento danificado</option>
+          <option>Travamento</option>
+          <option>Quebra por desalinhamento de placa</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="evidencia">Evidência (foto) <span class="opt">(opcional)</span></label>
+        <input type="file" id="evidencia" accept="image/*" capture="environment">
+      </div>
+
+      <div class="field">
+        <label for="observacoes">Observações <span class="opt">(opcional)</span></label>
+        <textarea id="observacoes"></textarea>
+      </div>
+    </div>
+
+    <button type="submit" id="btnEnviar">Enviar registro</button>
+    <div class="status" id="status"></div>
+    <a href="#" id="linkDownload" class="hidden download-link" download>Baixar PDF do registro</a>
+  </form>
+</main>
+
+<script>
+// ===================================================================
+// CONFIGURAÇÃO — substitua pela URL gerada pelo gatilho HTTP do fluxo
+// ===================================================================
+const FLOW_URL = "https://defaultc9f830b72f3f494cbe47f76f7ea235.6a.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/07/workflows/397d96a930b4431b9904a0386eb50fdd/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=C3KDHuDnT2EX36bAsjcl30sAZT-ish_KmmAiApph0qc";
+
+// ---- Popular horas (00:00 a 23:00) ----
+const selectHora = document.getElementById('hora');
+selectHora.innerHTML = '<option value="">Selecione</option>' +
+  Array.from({length: 24}, (_, i) => {
+    const h = String(i).padStart(2, '0') + ':00';
+    return `<option value="${h}">${h}</option>`;
+  }).join('');
+
+// ---- Placa (1 a 121, sempre visível) ----
+const selectPlaca = document.getElementById('placa');
+selectPlaca.innerHTML = '<option value="">Selecione</option>' +
+  Array.from({length: 121}, (_, i) => `<option>${i + 1}</option>`).join('');
+
+// ---- Lógica condicional: Tipo de troca -> Motivo ----
+const radiosTipoTroca = document.querySelectorAll('input[name="tipoTroca"]');
+const campoMotivoPreventiva = document.getElementById('campoMotivoPreventiva');
+const campoMotivoCorretiva = document.getElementById('campoMotivoCorretiva');
+const selectMotivoPreventiva = document.getElementById('motivoPreventiva');
+const selectMotivoCorretiva = document.getElementById('motivoCorretiva');
+
+function atualizarMotivo() {
+  const tipo = document.querySelector('input[name="tipoTroca"]:checked')?.value;
+  campoMotivoPreventiva.classList.add('hidden');
+  campoMotivoCorretiva.classList.add('hidden');
+  selectMotivoPreventiva.required = false;
+  selectMotivoCorretiva.required = false;
+
+  if (tipo === 'Preventiva') {
+    campoMotivoPreventiva.classList.remove('hidden');
+    selectMotivoPreventiva.required = true;
+  } else if (tipo === 'Corretiva') {
+    campoMotivoCorretiva.classList.remove('hidden');
+    selectMotivoCorretiva.required = true;
+  }
+}
+radiosTipoTroca.forEach(r => r.addEventListener('change', atualizarMotivo));
+
+// ---- Envio do formulário ----
+const form = document.getElementById('formRoldana');
+const btnEnviar = document.getElementById('btnEnviar');
+const status = document.getElementById('status');
+const linkDownload = document.getElementById('linkDownload');
+let pdfUrlAtual = null;
+
+function mostrarStatus(tipo, texto) {
+  status.className = 'status show ' + tipo;
+  status.textContent = texto;
+}
+
+function limparLinkAnterior() {
+  if (pdfUrlAtual) {
+    URL.revokeObjectURL(pdfUrlAtual);
+    pdfUrlAtual = null;
+  }
+  linkDownload.classList.add('hidden');
+}
+
+function lerArquivoComoBase64(arquivo) {
+  return new Promise((resolve, reject) => {
+    if (!arquivo) { resolve(null); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]); // remove o prefixo data:...;base64,
+    reader.onerror = () => reject(new Error('Não foi possível ler a foto selecionada.'));
+    reader.readAsDataURL(arquivo);
+  });
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const filtro = document.getElementById('filtro').value;
+  const tipoTroca = document.querySelector('input[name="tipoTroca"]:checked')?.value;
+  const motivo = tipoTroca === 'Preventiva' ? selectMotivoPreventiva.value : selectMotivoCorretiva.value;
+
+  const arquivoEvidencia = document.getElementById('evidencia').files[0] || null;
+
+  btnEnviar.disabled = true;
+  limparLinkAnterior();
+  mostrarStatus('loading', 'Enviando registro e gerando PDF…');
+
+  let evidenciaBase64 = null;
+  try {
+    evidenciaBase64 = await lerArquivoComoBase64(arquivoEvidencia);
+  } catch (err) {
+    mostrarStatus('err', err.message);
+    btnEnviar.disabled = false;
+    return;
+  }
+
+  const payload = {
+    data: document.getElementById('data').value,
+    hora: selectHora.value,
+    turno: document.querySelector('input[name="turno"]:checked')?.value,
+    letra: document.getElementById('letra').value,
+    nome: document.getElementById('nome').value,
+    filtro: filtro,
+    placa: selectPlaca.value,
+    lado: document.querySelector('input[name="lado"]:checked')?.value,
+    tipoTroca: tipoTroca,
+    motivo: motivo,
+    evidenciaBase64: evidenciaBase64 || '',
+    evidenciaNomeArquivo: arquivoEvidencia ? arquivoEvidencia.name : '',
+    observacoes: document.getElementById('observacoes').value
+  };
+
+  try {
+    const resp = await fetch(FLOW_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) throw new Error('Erro no envio: ' + resp.status);
+
+    const result = await resp.json();
+    // Espera-se um JSON como: { "pdfBase64": "...", "idRegistro": "RLD-..." }
+
+    if (!result.pdfBase64) throw new Error('Resposta sem PDF.');
+
+    const byteChars = atob(result.pdfBase64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const nomeArquivo = (result.idRegistro || 'registro-roldana') + '.pdf';
+
+    // Guarda a URL para o botão de download manual (não revoga ainda)
+    pdfUrlAtual = url;
+    linkDownload.href = url;
+    linkDownload.download = nomeArquivo;
+    linkDownload.classList.remove('hidden');
+
+    // Tenta o download automático também
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeArquivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    mostrarStatus('ok', 'Registro enviado. Se o PDF não baixar automaticamente, use o botão abaixo.');
+    form.reset();
+    campoMotivoPreventiva.classList.add('hidden');
+    campoMotivoCorretiva.classList.add('hidden');
+
+  } catch (err) {
+    mostrarStatus('err', 'Falha ao enviar: ' + err.message);
+  } finally {
+    btnEnviar.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>
