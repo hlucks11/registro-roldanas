@@ -26,7 +26,7 @@
     padding: 0 0 60px;
   }
   header {
-    background: var(--charcoal);
+    background: #009394;
     color: #fff;
     padding: 20px 20px 18px;
   }
@@ -227,7 +227,17 @@
       </div>
 
       <div class="field">
-        <label for="placa">Placa</label>
+        <label for="componenteFiltro">Componente do Filtro</label>
+        <select id="componenteFiltro" required>
+          <option value="">Selecione</option>
+          <option>Trolley</option>
+          <option>Carro Deslocador</option>
+          <option>Placas</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="placa">Posição</label>
         <select id="placa" required></select>
       </div>
 
@@ -317,10 +327,28 @@ selectHora.innerHTML = '<option value="">Selecione</option>' +
     return `<option value="${h}">${h}</option>`;
   }).join('');
 
-// ---- Placa (1 a 121, sempre visível) ----
+// ---- Região -> Posição (opções dependem da região escolhida) ----
+const selectComponenteFiltro = document.getElementById('componenteFiltro');
 const selectPlaca = document.getElementById('placa');
-selectPlaca.innerHTML = '<option value="">Selecione</option>' +
-  Array.from({length: 121}, (_, i) => `<option>${i + 1}</option>`).join('');
+
+function popularPosicao(qtd) {
+  selectPlaca.innerHTML = '<option value="">Selecione</option>' +
+    Array.from({length: qtd}, (_, i) => `<option>${i + 1}</option>`).join('');
+}
+
+function atualizarPosicao() {
+  const componenteFiltro = selectComponenteFiltro.value;
+  if (componenteFiltro === 'Trolley' || componenteFiltro === 'Carro Deslocador') {
+    popularPosicao(2);
+  } else if (componenteFiltro === 'Placas') {
+    popularPosicao(121);
+  } else {
+    selectPlaca.innerHTML = '<option value="">Selecione</option>';
+  }
+}
+
+selectComponenteFiltro.addEventListener('change', atualizarPosicao);
+atualizarPosicao();
 
 // ---- Lógica condicional: Tipo de troca -> Motivo ----
 const radiosTipoTroca = document.querySelectorAll('input[name="tipoTroca"]');
@@ -425,6 +453,7 @@ form.addEventListener('submit', async (e) => {
     letra: document.getElementById('letra').value,
     nome: document.getElementById('nome').value,
     filtro: filtro,
+    componenteFiltro: selectComponenteFiltro.value,
     placa: selectPlaca.value,
     lado: document.querySelector('input[name="lado"]:checked')?.value,
     tipoTroca: tipoTroca,
@@ -474,6 +503,7 @@ form.addEventListener('submit', async (e) => {
     form.reset();
     campoMotivoPreventiva.classList.add('hidden');
     campoMotivoCorretiva.classList.add('hidden');
+    atualizarPosicao();
 
   } catch (err) {
     mostrarStatus('err', 'Falha ao enviar: ' + err.message);
