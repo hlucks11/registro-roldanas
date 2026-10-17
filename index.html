@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registro de Roldanas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --teal: #008080;
@@ -168,7 +169,7 @@
 
 <header>
   <h1>Registro de troca de roldanas</h1>
-  <p>Preencha os campos abaixo. Ao enviar, o PDF do registro é baixado automaticamente.</p>
+  <p>Preencha os campos abaixo. O PDF é gerado e baixado no celular; o registro vai para a lista do GEFIL.</p>
 </header>
 
 <main>
@@ -317,7 +318,7 @@
 // ===================================================================
 // CONFIGURAÇÃO — substitua pela URL gerada pelo gatilho HTTP do fluxo
 // ===================================================================
-const FLOW_URL = "https://defaultc9f830b72f3f494cbe47f76f7ea235.6a.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/07/workflows/397d96a930b4431b9904a0386eb50fdd/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=C3KDHuDnT2EX36bAsjcl30sAZT-ish_KmmAiApph0qc";
+const FLOW_URL = "https://defaultc9f830b72f3f494cbe47f76f7ea235.6a.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/08/workflows/24b813b36cbf438994014d3786e9f345/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=aU7yn83SRTC_5j12sddz-MYvzun4BWobfUJNHt7Y0Yg";
 
 // ---- Popular horas (00:00 a 23:00) ----
 const selectHora = document.getElementById('hora');
@@ -395,26 +396,21 @@ function limparLinkAnterior() {
 }
 
 function comprimirImagem(arquivo, maxLargura, qualidade) {
-  maxLargura = maxLargura || 800;
-  qualidade = qualidade || 0.5;
+  // A foto não sai mais do celular: só entra no PDF. Por isso pode ter mais resolução.
+  maxLargura = maxLargura || 1200;
+  qualidade = qualidade || 0.8;
   return new Promise((resolve, reject) => {
     if (!arquivo) { resolve(null); return; }
     const leitor = new FileReader();
     leitor.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        let largura = img.width;
-        let altura = img.height;
-        if (largura > maxLargura) {
-          altura = Math.round(altura * (maxLargura / largura));
-          largura = maxLargura;
-        }
+        let largura = img.width, altura = img.height;
+        if (largura > maxLargura) { altura = Math.round(altura * (maxLargura / largura)); largura = maxLargura; }
         const canvas = document.createElement('canvas');
-        canvas.width = largura;
-        canvas.height = altura;
+        canvas.width = largura; canvas.height = altura;
         canvas.getContext('2d').drawImage(img, 0, 0, largura, altura);
-        const dataUrl = canvas.toDataURL('image/jpeg', qualidade);
-        resolve(dataUrl.split(',')[1]); // remove o prefixo data:image/jpeg;base64,
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', qualidade), largura, altura });
       };
       img.onerror = () => reject(new Error('Não foi possível processar a foto selecionada.'));
       img.src = e.target.result;
@@ -424,29 +420,101 @@ function comprimirImagem(arquivo, maxLargura, qualidade) {
   });
 }
 
+// ---- ID do registro (mesmo formato usado pelo fluxo: RLD-AAAAMMDD-HHMMSS) ----
+function gerarIdRegistro() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return `RLD-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+
+function fmtData(iso) { if (!iso) return ''; const a = iso.split('-'); return a.length === 3 ? `${a[2]}/${a[1]}/${a[0]}` : iso; }
+
+// ---- PDF gerado no próprio celular (layout equivalente ao antigo HTML do fluxo) ----
+function gerarPdf(p, foto) {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  const W = 210, M = 18, teal = [0,128,128], text = [44,44,42], label = [92,93,84], muted = [107,108,100], line = [216,218,211];
+  pdf.setFillColor(...teal); pdf.rect(0, 0, W, 4, 'F');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(18); pdf.setTextColor(...teal);
+  pdf.text('Registro de Troca de Roldana', M, 20);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(10); pdf.setTextColor(...muted);
+  pdf.text('ID do registro: ' + p.idRegistro, M, 26.5);
+  pdf.text('Ero Copper · Operação Filtragem · GEFIL', W - M, 26.5, { align: 'right' });
+  pdf.setDrawColor(...line); pdf.setLineWidth(0.3); pdf.line(M, 30, W - M, 30);
+
+  const linhas = [
+    ['Data', fmtData(p.data)], ['Hora', p.hora], ['Turno', p.turno], ['Letra', p.letra], ['Nome', p.nome],
+    ['Filtro', p.filtro], ['Componente do Filtro', p.componenteFiltro], ['Posição / Placa', p.placa], ['Lado', p.lado],
+    ['Tipo de Troca', p.tipoTroca], ['Motivo', p.motivo], ['Observações', p.observacoes || '—']
+  ];
+  let y = 38; const colL = M, colV = M + 52, wV = W - M - colV;
+  linhas.forEach(([k, v]) => {
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(10.5); pdf.setTextColor(...label); pdf.text(k, colL, y);
+    pdf.setFont('helvetica','normal'); pdf.setTextColor(...text);
+    const tx = pdf.splitTextToSize(String(v ?? ''), wV);
+    pdf.text(tx, colV, y);
+    y += Math.max(1, tx.length) * 5 + 3.5;
+    pdf.setDrawColor(...line); pdf.line(M, y - 2.2, W - M, y - 2.2);
+  });
+
+  y += 4;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(10.5); pdf.setTextColor(...label); pdf.text('Evidência (foto)', colL, y);
+  if (foto) {
+    const maxW = W - 2*M, maxH = 275 - (y + 4);
+    let w = maxW, h = w * foto.altura / foto.largura;
+    if (h > maxH) { h = maxH; w = h * foto.largura / foto.altura; }
+    if (h > 120) { h = 120; w = h * foto.largura / foto.altura; }
+    pdf.addImage(foto.dataUrl, 'JPEG', colL, y + 4, w, h);
+    pdf.setDrawColor(...line); pdf.rect(colL, y + 4, w, h);
+    y += h + 10;
+  } else {
+    pdf.setFont('helvetica','normal'); pdf.setTextColor(...text); pdf.text('Sem foto anexada', colV, y); y += 8;
+  }
+
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(8.5); pdf.setTextColor(...muted);
+  pdf.text('PDF gerado em: ' + new Date().toLocaleString('pt-BR'), M, 287);
+  pdf.text('Ero Copper Corp. | TSX: ERO | NYSE: ERO', W - M, 287, { align: 'right' });
+  return pdf;
+}
+
+// ---- Fila de reenvio: registros que não chegaram ao GEFIL ficam no celular e saem na próxima abertura ----
+const FILA_KEY = 'roldanas_fila_envio';
+function lerFila() { try { return JSON.parse(localStorage.getItem(FILA_KEY) || '[]'); } catch { return []; } }
+function salvarFila(f) { try { localStorage.setItem(FILA_KEY, JSON.stringify(f)); } catch {} }
+
+async function enviarAoFluxo(payload) {
+  const resp = await fetch(FLOW_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) });
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  return resp;
+}
+
+async function reenviarPendentes() {
+  const fila = lerFila(); if (!fila.length) return;
+  const restantes = [];
+  for (const p of fila) { try { await enviarAoFluxo(p); } catch { restantes.push(p); } }
+  salvarFila(restantes);
+  if (restantes.length < fila.length) mostrarStatus('ok', `${fila.length - restantes.length} registro(s) pendente(s) enviado(s) ao GEFIL.`);
+}
+window.addEventListener('load', () => { if (navigator.onLine) reenviarPendentes(); });
+window.addEventListener('online', reenviarPendentes);
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const filtro = document.getElementById('filtro').value;
   const tipoTroca = document.querySelector('input[name="tipoTroca"]:checked')?.value;
   const motivo = tipoTroca === 'Preventiva' ? selectMotivoPreventiva.value : selectMotivoCorretiva.value;
-
   const arquivoEvidencia = document.getElementById('evidencia').files[0] || null;
 
   btnEnviar.disabled = true;
   limparLinkAnterior();
-  mostrarStatus('loading', 'Enviando registro e gerando PDF…');
+  mostrarStatus('loading', 'Gerando PDF…');
 
-  let evidenciaBase64 = null;
-  try {
-    evidenciaBase64 = await comprimirImagem(arquivoEvidencia);
-  } catch (err) {
-    mostrarStatus('err', err.message);
-    btnEnviar.disabled = false;
-    return;
-  }
+  let foto = null;
+  try { foto = await comprimirImagem(arquivoEvidencia); }
+  catch (err) { mostrarStatus('err', err.message); btnEnviar.disabled = false; return; }
 
   const payload = {
+    idRegistro: gerarIdRegistro(),
     data: document.getElementById('data').value,
     hora: selectHora.value,
     turno: document.querySelector('input[name="turno"]:checked')?.value,
@@ -458,58 +526,37 @@ form.addEventListener('submit', async (e) => {
     lado: document.querySelector('input[name="lado"]:checked')?.value,
     tipoTroca: tipoTroca,
     motivo: motivo,
-    evidenciaBase64: evidenciaBase64 || '',
-    evidenciaNomeArquivo: arquivoEvidencia ? arquivoEvidencia.name : '',
-    observacoes: document.getElementById('observacoes').value
+    observacoes: document.getElementById('observacoes').value,
+    temFoto: !!foto
   };
 
+  // 1) PDF local, com a foto, baixado na hora
   try {
-    const resp = await fetch(FLOW_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!resp.ok) throw new Error('Erro no envio: ' + resp.status);
-
-    const result = await resp.json();
-    // Espera-se um JSON como: { "pdfBase64": "...", "idRegistro": "RLD-..." }
-
-    if (!result.pdfBase64) throw new Error('Resposta sem PDF.');
-
-    const byteChars = atob(result.pdfBase64);
-    const byteNumbers = new Array(byteChars.length);
-    for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const pdf = gerarPdf(payload, foto);
+    const blob = pdf.output('blob');
     const url = URL.createObjectURL(blob);
-    const nomeArquivo = (result.idRegistro || 'registro-roldana') + '.pdf';
-
-    // Guarda a URL para o botão de download manual (não revoga ainda)
-    pdfUrlAtual = url;
-    linkDownload.href = url;
-    linkDownload.download = nomeArquivo;
-    linkDownload.classList.remove('hidden');
-
-    // Tenta o download automático também
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = nomeArquivo;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    mostrarStatus('ok', 'Registro enviado. Se o PDF não baixar automaticamente, use o botão abaixo.');
-    form.reset();
-    campoMotivoPreventiva.classList.add('hidden');
-    campoMotivoCorretiva.classList.add('hidden');
-    atualizarPosicao();
-
+    const nomeArquivo = payload.idRegistro + '.pdf';
+    pdfUrlAtual = url; linkDownload.href = url; linkDownload.download = nomeArquivo; linkDownload.classList.remove('hidden');
+    const a = document.createElement('a'); a.href = url; a.download = nomeArquivo; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   } catch (err) {
-    mostrarStatus('err', 'Falha ao enviar: ' + err.message);
-  } finally {
-    btnEnviar.disabled = false;
+    mostrarStatus('err', 'Falha ao gerar o PDF: ' + err.message); btnEnviar.disabled = false; return;
   }
+
+  // 2) Só os campos vão para o fluxo (sem foto, sem PDF)
+  mostrarStatus('loading', 'PDF gerado. Enviando registro ao GEFIL…');
+  try {
+    await enviarAoFluxo(payload);
+    mostrarStatus('ok', `Registro ${payload.idRegistro} enviado ao GEFIL. Se o PDF não baixou automaticamente, use o botão abaixo.`);
+  } catch (err) {
+    const fila = lerFila(); fila.push(payload); salvarFila(fila);
+    mostrarStatus('err', `PDF baixado, mas o registro ${payload.idRegistro} não chegou ao GEFIL (${err.message}). Ele ficou guardado neste celular e será reenviado automaticamente quando houver conexão.`);
+  }
+
+  form.reset();
+  campoMotivoPreventiva.classList.add('hidden');
+  campoMotivoCorretiva.classList.add('hidden');
+  atualizarPosicao();
+  btnEnviar.disabled = false;
 });
 </script>
 
